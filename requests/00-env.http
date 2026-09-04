@@ -1,0 +1,10 @@
+# Shared variables — update these after each successful POST
+# Usage: run requests in order 01 → 09, copy IDs from responses into variables below
+
+@baseUrl = http://localhost:3000
+
+# Fill these in after running the corresponding POST requests:
+@measurementTypeId = <paste-id-from-01>
+@trainerId = <paste-id-from-02>
+@personId = <paste-id-from-03>
+@evaluationId = <paste-id-from-04>

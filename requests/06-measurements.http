@@ -1,0 +1,14 @@
+### Register Measurements (batch) for an Evaluation
+POST {{baseUrl}}/evaluations/{{evaluationId}}/measurements
+Content-Type: application/json
+
+{
+  "measurements": [
+    { "measurementTypeId": "{{measurementTypeId}}", "value": 33.0 }
+  ]
+}
+
+###
+
+### List Measurements for an Evaluation
+GET {{baseUrl}}/evaluations/{{evaluationId}}/measurements

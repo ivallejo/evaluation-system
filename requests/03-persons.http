@@ -1,0 +1,36 @@
+### Create Person
+# @name createPerson
+POST {{baseUrl}}/persons
+Content-Type: application/json
+
+{
+  "firstName": "Ana",
+  "lastName": "García",
+  "documentNumber": "12345678",
+  "sex": "female",
+  "birthDate": "1990-05-15",
+  "phone": "+52-555-1234567",
+  "childrenCount": 1,
+  "occupation": "Profesora"
+}
+
+###
+
+### List all Persons
+GET {{baseUrl}}/persons
+
+###
+
+### Get Person by ID
+GET {{baseUrl}}/persons/{{personId}}
+
+###
+
+### Update Person (PATCH — only send fields to change)
+PATCH {{baseUrl}}/persons/{{personId}}
+Content-Type: application/json
+
+{
+  "phone": "+52-555-9999999",
+  "occupation": "Directora"
+}

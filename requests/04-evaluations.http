@@ -1,0 +1,51 @@
+### Create Evaluation — full example (bodyComposition + measurements + dietaryHabits)
+# @name createEvaluation
+POST {{baseUrl}}/persons/{{personId}}/evaluations
+Content-Type: application/json
+
+{
+  "trainerId": "{{trainerId}}",
+  "evaluationDate": "2024-09-04",
+  "objective": "Reducción de grasa corporal",
+  "trainingLevel": "intermediate",
+  "bodyComposition": {
+    "weightKg": 72.5,
+    "heightM": 1.65,
+    "bmi": 26.6,
+    "bodyFatPercentage": 28.0,
+    "muscleMassPercentage": 34.0,
+    "boneMassKg": 2.8,
+    "visceralFat": 8
+  },
+  "measurements": [
+    { "measurementTypeId": "{{measurementTypeId}}", "value": 32.5 }
+  ],
+  "dietaryHabits": {
+    "description": "Dieta alta en proteína, baja en carbohidratos. Come 4 veces al día."
+  }
+}
+
+###
+
+### Create Evaluation — minimal (bodyComposition only, no trainer)
+POST {{baseUrl}}/persons/{{personId}}/evaluations
+Content-Type: application/json
+
+{
+  "evaluationDate": "2024-10-01",
+  "bodyComposition": {
+    "weightKg": 70.0,
+    "heightM": 1.65
+  },
+  "measurements": []
+}
+
+###
+
+### List Evaluations for a Person
+GET {{baseUrl}}/persons/{{personId}}/evaluations
+
+###
+
+### Get Evaluation by ID
+GET {{baseUrl}}/evaluations/{{evaluationId}}

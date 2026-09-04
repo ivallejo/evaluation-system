@@ -1,0 +1,7 @@
+### Health check
+GET {{baseUrl}}/health
+
+###
+
+### Swagger UI (open in browser)
+# GET {{baseUrl}}/docs

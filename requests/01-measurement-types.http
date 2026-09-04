@@ -1,0 +1,21 @@
+### Create MeasurementType — BICEP custom
+# @name createMeasurementType
+POST {{baseUrl}}/measurement-types
+Content-Type: application/json
+
+{
+  "code": "CUSTOM_BICEP",
+  "name": "Bícep personalizado",
+  "unit": "cm",
+  "category": "superior"
+}
+
+###
+
+### List all MeasurementTypes
+GET {{baseUrl}}/measurement-types
+
+###
+
+### Get MeasurementType by ID
+GET {{baseUrl}}/measurement-types/{{measurementTypeId}}

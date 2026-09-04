@@ -1,0 +1,2 @@
+### Get progress history for a Person (ordered by date ASC)
+GET {{baseUrl}}/persons/{{personId}}/progress

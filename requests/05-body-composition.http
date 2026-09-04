@@ -1,0 +1,16 @@
+### Register BodyComposition for an Evaluation
+POST {{baseUrl}}/evaluations/{{evaluationId}}/body-composition
+Content-Type: application/json
+
+{
+  "weightKg": 71.0,
+  "heightM": 1.65,
+  "bmi": 26.1,
+  "bodyFatPercentage": 27.5,
+  "muscleMassPercentage": 35.0
+}
+
+###
+
+### Get BodyComposition for an Evaluation
+GET {{baseUrl}}/evaluations/{{evaluationId}}/body-composition

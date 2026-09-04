@@ -1,0 +1,20 @@
+### Create Trainer
+# @name createTrainer
+POST {{baseUrl}}/trainers
+Content-Type: application/json
+
+{
+  "firstName": "Carlos",
+  "lastName": "López",
+  "email": "carlos.lopez@gym.com"
+}
+
+###
+
+### List all Trainers
+GET {{baseUrl}}/trainers
+
+###
+
+### Get Trainer by ID
+GET {{baseUrl}}/trainers/{{trainerId}}

@@ -1,0 +1,12 @@
+### Upsert DietaryHabits (create or update)
+PUT {{baseUrl}}/evaluations/{{evaluationId}}/dietary-habits
+Content-Type: application/json
+
+{
+  "description": "Dieta mediterránea. Consume 3 comidas principales y 2 colaciones. Bebe 2L de agua diaria."
+}
+
+###
+
+### Get DietaryHabits for an Evaluation
+GET {{baseUrl}}/evaluations/{{evaluationId}}/dietary-habits
