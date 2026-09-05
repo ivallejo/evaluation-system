@@ -1,0 +1,791 @@
+{
+  "info": {
+    "name": "Evaluation System API",
+    "description": "Colección completa para el Sistema de Evaluaciones Físicas/Antropométricas.\n\nFlujo recomendado:\n1. MeasurementTypes — verificar catálogo seed\n2. Trainers — crear trainer\n3. Persons — crear persona\n4. Evaluations — crear evaluación completa (transaccional)\n5. BodyComposition, Measurements, DietaryHabits — endpoints separados\n6. Progress — consultar progreso histórico\n7. Health — verificar estado del sistema",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl",           "value": "http://localhost:3000", "type": "string" },
+    { "key": "measurementTypeId", "value": "",                       "type": "string", "description": "Se llena automáticamente al hacer GET /measurement-types" },
+    { "key": "trainerId",         "value": "",                       "type": "string", "description": "Se llena automáticamente al hacer POST /trainers" },
+    { "key": "personId",          "value": "",                       "type": "string", "description": "Se llena automáticamente al hacer POST /persons" },
+    { "key": "evaluationId",      "value": "",                       "type": "string", "description": "Se llena automáticamente al hacer POST /evaluations" }
+  ],
+  "item": [
+    {
+      "name": "Health",
+      "item": [
+        {
+          "name": "GET /health",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/health", "host": ["{{baseUrl}}"], "path": ["health"] }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Database connected', () => {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.status).to.eql('ok');",
+                  "    pm.expect(json.database).to.eql('connected');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "MeasurementTypes",
+      "item": [
+        {
+          "name": "GET /measurement-types — listar catálogo",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/measurement-types", "host": ["{{baseUrl}}"], "path": ["measurement-types"] }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Retorna 12 tipos seed', () => pm.expect(pm.response.json().length).to.be.at.least(12));",
+                  "// Guarda el ID del tipo WAIST para usarlo en measurements",
+                  "const waist = pm.response.json().find(t => t.code === 'WAIST');",
+                  "if (waist) {",
+                  "    pm.collectionVariables.set('measurementTypeId', waist.id);",
+                  "    console.log('WAIST id guardado:', waist.id);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /measurement-types/:id",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/measurement-types/{{measurementTypeId}}", "host": ["{{baseUrl}}"], "path": ["measurement-types", "{{measurementTypeId}}"] }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Tiene campos requeridos', () => {",
+                  "    const j = pm.response.json();",
+                  "    pm.expect(j).to.have.property('id');",
+                  "    pm.expect(j).to.have.property('code');",
+                  "    pm.expect(j).to.have.property('category');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /measurement-types — crear tipo",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/measurement-types", "host": ["{{baseUrl}}"], "path": ["measurement-types"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"code\": \"CUSTOM_BICEP\",\n  \"name\": \"Bícep personalizado\",\n  \"unit\": \"cm\",\n  \"category\": \"superior\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 201', () => pm.response.to.have.status(201));",
+                  "pm.test('active es true por defecto', () => pm.expect(pm.response.json().active).to.be.true);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /measurement-types — 409 código duplicado",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/measurement-types", "host": ["{{baseUrl}}"], "path": ["measurement-types"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"code\": \"WAIST\",\n  \"name\": \"Cintura duplicada\",\n  \"unit\": \"cm\",\n  \"category\": \"inferior\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 409 Conflict', () => pm.response.to.have.status(409));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /measurement-types/:id — 404 inexistente",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/measurement-types/00000000-0000-0000-0000-000000000000", "host": ["{{baseUrl}}"], "path": ["measurement-types", "00000000-0000-0000-0000-000000000000"] }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 404', () => pm.response.to.have.status(404));",
+                  "pm.test('Mensaje correcto', () => pm.expect(pm.response.json().message).to.eql('MeasurementType not found'));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Trainers",
+      "item": [
+        {
+          "name": "POST /trainers — crear trainer",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/trainers", "host": ["{{baseUrl}}"], "path": ["trainers"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"firstName\": \"Carlos\",\n  \"lastName\": \"Lopez\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 201', () => pm.response.to.have.status(201));",
+                  "pm.test('active es true por defecto', () => pm.expect(pm.response.json().active).to.be.true);",
+                  "pm.collectionVariables.set('trainerId', pm.response.json().id);",
+                  "console.log('trainerId guardado:', pm.response.json().id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /trainers — listar",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/trainers", "host": ["{{baseUrl}}"], "path": ["trainers"] }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Es array', () => pm.expect(pm.response.json()).to.be.an('array'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /trainers/:id",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/trainers/{{trainerId}}", "host": ["{{baseUrl}}"], "path": ["trainers", "{{trainerId}}"] }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('ID coincide', () => pm.expect(pm.response.json().id).to.eql(pm.collectionVariables.get('trainerId')));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /trainers/:id — 404 inexistente",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/trainers/00000000-0000-0000-0000-000000000000", "host": ["{{baseUrl}}"], "path": ["trainers", "00000000-0000-0000-0000-000000000000"] }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 404', () => pm.response.to.have.status(404));",
+                  "pm.test('Mensaje correcto', () => pm.expect(pm.response.json().message).to.eql('Trainer not found'));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Persons",
+      "item": [
+        {
+          "name": "POST /persons — crear persona",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/persons", "host": ["{{baseUrl}}"], "path": ["persons"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"firstName\": \"Ana\",\n  \"lastName\": \"Garcia\",\n  \"documentNumber\": \"12345678\",\n  \"sex\": \"female\",\n  \"birthDate\": \"1990-05-15\",\n  \"phone\": \"+52-555-1234567\",\n  \"childrenCount\": 1,\n  \"occupation\": \"Profesora\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 201', () => pm.response.to.have.status(201));",
+                  "pm.test('Tiene id UUID', () => pm.expect(pm.response.json().id).to.match(/^[0-9a-f-]{36}$/));",
+                  "pm.collectionVariables.set('personId', pm.response.json().id);",
+                  "console.log('personId guardado:', pm.response.json().id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /persons — listar",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/persons", "host": ["{{baseUrl}}"], "path": ["persons"] }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Es array', () => pm.expect(pm.response.json()).to.be.an('array'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /persons/:id",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/persons/{{personId}}", "host": ["{{baseUrl}}"], "path": ["persons", "{{personId}}"] }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('ID coincide', () => pm.expect(pm.response.json().id).to.eql(pm.collectionVariables.get('personId')));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "PATCH /persons/:id — actualizar",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/persons/{{personId}}", "host": ["{{baseUrl}}"], "path": ["persons", "{{personId}}"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"phone\": \"+52-555-9999999\",\n  \"occupation\": \"Directora\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('updatedAt cambió', () => pm.expect(pm.response.json().updatedAt).to.exist);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /persons — 409 documentNumber duplicado",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/persons", "host": ["{{baseUrl}}"], "path": ["persons"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"firstName\": \"Otra\",\n  \"lastName\": \"Persona\",\n  \"documentNumber\": \"12345678\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 409', () => pm.response.to.have.status(409));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /persons — 400 sin firstName",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/persons", "host": ["{{baseUrl}}"], "path": ["persons"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"lastName\": \"Garcia\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 400', () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /persons/:id — 404 inexistente",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/persons/00000000-0000-0000-0000-000000000000", "host": ["{{baseUrl}}"], "path": ["persons", "00000000-0000-0000-0000-000000000000"] }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 404', () => pm.response.to.have.status(404));",
+                  "pm.test('Mensaje correcto', () => pm.expect(pm.response.json().message).to.eql('Person not found'));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Evaluations",
+      "item": [
+        {
+          "name": "POST /persons/:personId/evaluations — completa (transaccional)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/persons/{{personId}}/evaluations", "host": ["{{baseUrl}}"], "path": ["persons", "{{personId}}", "evaluations"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"trainerId\": \"{{trainerId}}\",\n  \"evaluationDate\": \"2024-09-04\",\n  \"objective\": \"Reducción de grasa corporal\",\n  \"trainingLevel\": \"intermediate\",\n  \"bodyComposition\": {\n    \"weightKg\": 72.5,\n    \"heightM\": 1.65,\n    \"bmi\": 26.6,\n    \"bodyFatPercentage\": 28.0,\n    \"muscleMassPercentage\": 34.0,\n    \"boneMassKg\": 2.8\n  },\n  \"measurements\": [\n    { \"measurementTypeId\": \"{{measurementTypeId}}\", \"value\": 32.5 }\n  ],\n  \"dietaryHabits\": {\n    \"description\": \"Dieta alta en proteína, baja en carbohidratos. Come 4 veces al día.\"\n  }\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 201', () => pm.response.to.have.status(201));",
+                  "const j = pm.response.json();",
+                  "pm.test('Retorna evaluación con sub-objetos', () => {",
+                  "    pm.expect(j).to.have.property('bodyComposition');",
+                  "    pm.expect(j).to.have.property('measurements');",
+                  "    pm.expect(j).to.have.property('dietaryHabits');",
+                  "});",
+                  "pm.test('measurements tiene 1 item', () => pm.expect(j.measurements.length).to.eql(1));",
+                  "const evalId = j.evaluation ? j.evaluation.id : j.id;",
+                  "pm.collectionVariables.set('evaluationId', evalId);",
+                  "console.log('evaluationId guardado:', evalId);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /persons/:personId/evaluations — minimal (solo bodyComposition)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/persons/{{personId}}/evaluations", "host": ["{{baseUrl}}"], "path": ["persons", "{{personId}}", "evaluations"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"evaluationDate\": \"2024-10-01\",\n  \"bodyComposition\": {\n    \"weightKg\": 70.0,\n    \"heightM\": 1.65\n  },\n  \"measurements\": []\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 201', () => pm.response.to.have.status(201));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /persons/:personId/evaluations — listar por persona",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/persons/{{personId}}/evaluations", "host": ["{{baseUrl}}"], "path": ["persons", "{{personId}}", "evaluations"] }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Es array', () => pm.expect(pm.response.json()).to.be.an('array'));",
+                  "pm.test('Orden descendente por fecha', () => {",
+                  "    const evals = pm.response.json();",
+                  "    if (evals.length >= 2) {",
+                  "        pm.expect(new Date(evals[0].evaluationDate) >= new Date(evals[1].evaluationDate)).to.be.true;",
+                  "    }",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /evaluations/:id — con sub-objetos",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/evaluations/{{evaluationId}}", "host": ["{{baseUrl}}"], "path": ["evaluations", "{{evaluationId}}"] }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "const j = pm.response.json();",
+                  "pm.test('Incluye bodyComposition', () => pm.expect(j.bodyComposition).to.exist);",
+                  "pm.test('Incluye measurements', () => pm.expect(j.measurements).to.be.an('array'));",
+                  "pm.test('Incluye dietaryHabits', () => pm.expect(j.dietaryHabits).to.exist);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /evaluations — 404 person inexistente",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/persons/00000000-0000-0000-0000-000000000000/evaluations", "host": ["{{baseUrl}}"], "path": ["persons", "00000000-0000-0000-0000-000000000000", "evaluations"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"evaluationDate\": \"2024-01-01\",\n  \"bodyComposition\": { \"weightKg\": 70, \"heightM\": 1.70 },\n  \"measurements\": []\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 404', () => pm.response.to.have.status(404));",
+                  "pm.test('Mensaje correcto', () => pm.expect(pm.response.json().message).to.eql('Person not found'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /evaluations — 409 measurementTypeId duplicado en array",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/persons/{{personId}}/evaluations", "host": ["{{baseUrl}}"], "path": ["persons", "{{personId}}", "evaluations"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"evaluationDate\": \"2024-12-01\",\n  \"bodyComposition\": { \"weightKg\": 70, \"heightM\": 1.65 },\n  \"measurements\": [\n    { \"measurementTypeId\": \"{{measurementTypeId}}\", \"value\": 30 },\n    { \"measurementTypeId\": \"{{measurementTypeId}}\", \"value\": 31 }\n  ]\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 409', () => pm.response.to.have.status(409));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "BodyComposition",
+      "item": [
+        {
+          "name": "GET /evaluations/:evaluationId/body-composition",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/evaluations/{{evaluationId}}/body-composition", "host": ["{{baseUrl}}"], "path": ["evaluations", "{{evaluationId}}", "body-composition"] }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "const j = pm.response.json();",
+                  "pm.test('Tiene weightKg y heightM', () => {",
+                  "    pm.expect(j.weightKg).to.exist;",
+                  "    pm.expect(j.heightM).to.exist;",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /evaluations/:evaluationId/body-composition — 409 duplicado",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/evaluations/{{evaluationId}}/body-composition", "host": ["{{baseUrl}}"], "path": ["evaluations", "{{evaluationId}}", "body-composition"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"weightKg\": 71.0,\n  \"heightM\": 1.65,\n  \"bmi\": 26.1,\n  \"bodyFatPercentage\": 27.5,\n  \"muscleMassPercentage\": 35.0\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 409 — ya existe BC para esta evaluación', () => pm.response.to.have.status(409));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /evaluations/:evaluationId/body-composition — 404 inexistente",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/evaluations/00000000-0000-0000-0000-000000000000/body-composition", "host": ["{{baseUrl}}"], "path": ["evaluations", "00000000-0000-0000-0000-000000000000", "body-composition"] }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 404', () => pm.response.to.have.status(404));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Measurements",
+      "item": [
+        {
+          "name": "GET /evaluations/:evaluationId/measurements",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/evaluations/{{evaluationId}}/measurements", "host": ["{{baseUrl}}"], "path": ["evaluations", "{{evaluationId}}", "measurements"] }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Es array', () => pm.expect(pm.response.json()).to.be.an('array'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /evaluations/:evaluationId/measurements — registrar batch",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/evaluations/{{evaluationId}}/measurements", "host": ["{{baseUrl}}"], "path": ["evaluations", "{{evaluationId}}", "measurements"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"measurements\": [\n    { \"measurementTypeId\": \"{{measurementTypeId}}\", \"value\": 33.0 }\n  ]\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Puede ser 201 (éxito) o 409 (ya existe para esta evaluación)",
+                  "pm.test('Status 201 o 409', () => {",
+                  "    pm.expect([201, 409]).to.include(pm.response.code);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "DietaryHabits",
+      "item": [
+        {
+          "name": "PUT /evaluations/:evaluationId/dietary-habits — upsert",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/evaluations/{{evaluationId}}/dietary-habits", "host": ["{{baseUrl}}"], "path": ["evaluations", "{{evaluationId}}", "dietary-habits"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"description\": \"Dieta mediterránea. Consume 3 comidas principales y 2 colaciones. Bebe 2L de agua diaria.\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Tiene description', () => pm.expect(pm.response.json().description).to.be.a('string'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /evaluations/:evaluationId/dietary-habits",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/evaluations/{{evaluationId}}/dietary-habits", "host": ["{{baseUrl}}"], "path": ["evaluations", "{{evaluationId}}", "dietary-habits"] }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Tiene evaluationId', () => pm.expect(pm.response.json().evaluationId).to.eql(pm.collectionVariables.get('evaluationId')));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Progress",
+      "item": [
+        {
+          "name": "GET /persons/:personId/progress — historial",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/persons/{{personId}}/progress", "host": ["{{baseUrl}}"], "path": ["persons", "{{personId}}", "progress"] }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Es array', () => pm.expect(pm.response.json()).to.be.an('array'));",
+                  "pm.test('Orden ascendente por fecha', () => {",
+                  "    const records = pm.response.json();",
+                  "    for (let i = 1; i < records.length; i++) {",
+                  "        pm.expect(new Date(records[i].evaluationDate) >= new Date(records[i-1].evaluationDate)).to.be.true;",
+                  "    }",
+                  "});",
+                  "pm.test('Estructura correcta', () => {",
+                  "    const records = pm.response.json();",
+                  "    if (records.length > 0) {",
+                  "        pm.expect(records[0]).to.have.property('evaluationDate');",
+                  "        pm.expect(records[0]).to.have.property('weightKg');",
+                  "        pm.expect(records[0]).to.have.property('bodyFatPercentage');",
+                  "        pm.expect(records[0]).to.have.property('muscleMassPercentage');",
+                  "        pm.expect(records[0]).to.have.property('waist');",
+                  "    }",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /persons/:personId/progress — 404 person inexistente",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/persons/00000000-0000-0000-0000-000000000000/progress", "host": ["{{baseUrl}}"], "path": ["persons", "00000000-0000-0000-0000-000000000000", "progress"] }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 404', () => pm.response.to.have.status(404));",
+                  "pm.test('Mensaje correcto', () => pm.expect(pm.response.json().message).to.eql('Person not found'));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
