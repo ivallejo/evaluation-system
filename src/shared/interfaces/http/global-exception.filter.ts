@@ -45,7 +45,10 @@ export class GlobalExceptionFilter implements ExceptionFilter {
         error = exception.name;
       }
     }
-    // For 500 errors: never expose stack trace or internal details to the client
+    // For 500 errors: log internally but never expose stack trace to the client
+    if (statusCode === 500) {
+      console.error('[GlobalExceptionFilter] Unhandled exception:', exception);
+    }
 
     response.status(statusCode).json({
       statusCode,

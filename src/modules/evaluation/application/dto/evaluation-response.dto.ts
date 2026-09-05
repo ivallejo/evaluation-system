@@ -57,7 +57,12 @@ export class EvaluationResponseDto {
   })
   dietaryHabits?: object;
 
-  static fromDomain(evaluation: Evaluation): EvaluationResponseDto {
+  static fromDomain(
+    evaluation: Evaluation,
+    bodyComposition?: object | null,
+    measurements?: object[],
+    dietaryHabits?: object | null,
+  ): EvaluationResponseDto {
     const dto = new EvaluationResponseDto();
     dto.id = evaluation.id;
     dto.personId = evaluation.personId;
@@ -70,6 +75,9 @@ export class EvaluationResponseDto {
     dto.otherComments = evaluation.otherComments;
     dto.createdAt = evaluation.createdAt;
     dto.updatedAt = evaluation.updatedAt;
+    dto.bodyComposition = bodyComposition ?? undefined;
+    dto.measurements = measurements;
+    dto.dietaryHabits = dietaryHabits ?? undefined;
     return dto;
   }
 }

@@ -3,6 +3,7 @@ import { Inject } from '@nestjs/common';
 import { BodyComposition } from '../../domain/entities/body-composition.entity.js';
 import type { BodyCompositionRepository } from '../../domain/repositories/body-composition.repository.js';
 import type { EvaluationRepository } from '../../../evaluation/domain/repositories/evaluation.repository.js';
+import { ConflictException } from '../../../../shared/domain/exceptions/conflict.exception.js';
 import { NotFoundException } from '../../../../shared/domain/exceptions/not-found.exception.js';
 import { ValidationException } from '../../../../shared/domain/exceptions/validation.exception.js';
 
@@ -58,6 +59,11 @@ export class CreateBodyCompositionUseCase {
     const evaluation = await this.evaluationRepository.findById(input.evaluationId);
     if (!evaluation) {
       throw new NotFoundException('Evaluation not found');
+    }
+
+    const existing = await this.bodyCompositionRepository.findByEvaluationId(input.evaluationId);
+    if (existing) {
+      throw new ConflictException('BodyComposition already exists for this evaluation');
     }
 
     const now = new Date();

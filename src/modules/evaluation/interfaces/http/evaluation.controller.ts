@@ -10,6 +10,9 @@ import { CreateEvaluationDto } from '../../application/dto/create-evaluation.dto
 import { CreateEvaluationResponseDto } from '../../application/dto/create-evaluation-response.dto.js';
 import { EvaluationResponseDto } from '../../application/dto/evaluation-response.dto.js';
 import { ProgressRecordResponseDto } from '../../application/dto/progress-record-response.dto.js';
+import { BodyCompositionResponseDto } from '../../../body-composition/application/dto/body-composition-response.dto.js';
+import { DietaryHabitsResponseDto } from '../../../dietary-habits/application/dto/dietary-habits-response.dto.js';
+import { EvaluationMeasurementResponseDto } from '../../../evaluation-measurement/application/dto/evaluation-measurement-response.dto.js';
 import { CreateEvaluationUseCase } from '../../application/use-cases/create-evaluation.use-case.js';
 import { GetEvaluationUseCase } from '../../application/use-cases/get-evaluation.use-case.js';
 import { GetProgressUseCase } from '../../application/use-cases/get-progress.use-case.js';
@@ -72,7 +75,7 @@ export class EvaluationController {
     @Param('personId') personId: string,
   ): Promise<EvaluationResponseDto[]> {
     const evaluations = await this.listPersonEvaluationsUseCase.execute(personId);
-    return evaluations.map(EvaluationResponseDto.fromDomain);
+    return evaluations.map((e) => EvaluationResponseDto.fromDomain(e));
   }
 
   @Get('evaluations/:id')
@@ -87,8 +90,14 @@ export class EvaluationController {
   @ApiResponse({ status: 404, type: ErrorResponseDto, description: 'Evaluation not found' })
   @ApiResponse({ status: 500, type: ErrorResponseDto, description: 'Internal server error' })
   async findOne(@Param('id') id: string): Promise<EvaluationResponseDto> {
-    const evaluation = await this.getEvaluationUseCase.execute(id);
-    return EvaluationResponseDto.fromDomain(evaluation);
+    const { evaluation, bodyComposition, measurements, dietaryHabits } =
+      await this.getEvaluationUseCase.execute(id);
+    return EvaluationResponseDto.fromDomain(
+      evaluation,
+      bodyComposition ? BodyCompositionResponseDto.fromDomain(bodyComposition) : null,
+      measurements.map(EvaluationMeasurementResponseDto.fromDomain),
+      dietaryHabits ? DietaryHabitsResponseDto.fromDomain(dietaryHabits) : null,
+    );
   }
 
   @Get('persons/:personId/progress')
